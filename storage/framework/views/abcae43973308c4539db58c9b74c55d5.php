@@ -1,32 +1,30 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'Beranda'); ?>
 
-@section('title', 'Beranda')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="row">
     <div class="col-md-8 mx-auto">
 
-        <h3 class="mb-4">Selamat datang, {{ $user->name }}!</h3>
+        <h3 class="mb-4">Selamat datang, <?php echo e($user->name); ?>!</h3>
 
-        {{-- Bagian pilih polling --}}
+        
         <div class="card mb-4">
             <div class="card-header">
                 Pilih atau lihat hasil polling
             </div>
             <div class="card-body">
-                @if($polls->isEmpty())
+                <?php if($polls->isEmpty()): ?>
                     <p class="text-muted mb-0">
                         Belum ada polling yang tersedia.
                     </p>
-                @else
-                    <form method="POST" action="{{ route('home.poll.go') }}">
-                        @csrf
+                <?php else: ?>
+                    <form method="POST" action="<?php echo e(route('home.poll.go')); ?>">
+                        <?php echo csrf_field(); ?>
                         <div class="mb-3">
                             <label class="form-label">Pilih polling</label>
                             <select name="poll_id" class="form-select" required>
                                 <option value="">-- pilih polling --</option>
-                                @foreach($polls as $poll)
-                                    @php
+                                <?php $__currentLoopData = $polls; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $poll): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                    <?php
                                         $now = now();
                                         $deadline = $poll->deadline;
                                         $waktuHabis = false;
@@ -35,26 +33,27 @@
                                         } elseif ($deadline && $now->greaterThanOrEqualTo($deadline)) {
                                             $waktuHabis = true;
                                         }
-                                    @endphp
+                                    ?>
 
-                                    <option value="{{ $poll->id }}">
-                                        {{ $poll->title }}
-                                        @if($waktuHabis)
+                                    <option value="<?php echo e($poll->id); ?>">
+                                        <?php echo e($poll->title); ?>
+
+                                        <?php if($waktuHabis): ?>
                                             (Ditutup / Selesai - lihat hasil)
-                                        @else
+                                        <?php else: ?>
                                             (Aktif - bisa ikut voting)
-                                        @endif
+                                        <?php endif; ?>
                                     </option>
-                                @endforeach
+                                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                             </select>
                         </div>
                         <button type="submit" class="btn btn-primary">Lanjut</button>
                     </form>
-                @endif
+                <?php endif; ?>
             </div>
         </div>
 
-        {{-- Bagian aspirasi --}}
+        
         <div class="card">
             <div class="card-header">
                 Aspirasi Warga
@@ -63,10 +62,10 @@
                 <p>
                     Anda dapat menyampaikan aspirasi kepada pengurus RT melalui sistem WarVote.
                 </p>
-                <a href="{{ route('aspirasi.create') }}" class="btn btn-success">
+                <a href="<?php echo e(route('aspirasi.create')); ?>" class="btn btn-success">
                     Ajukan Aspirasi
                 </a>
-                <a href="{{ route('aspirasi.index') }}" class="btn btn-outline-secondary">
+                <a href="<?php echo e(route('aspirasi.index')); ?>" class="btn btn-outline-secondary">
                     Lihat Aspirasi Disetujui
                 </a>
             </div>
@@ -74,4 +73,6 @@
 
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\php\New folder\WarVote\resources\views/polls/home.blade.php ENDPATH**/ ?>

@@ -1,15 +1,13 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'Kelola Aspirasi Warga'); ?>
 
-@section('title', 'Kelola Aspirasi Warga')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="row">
     <div class="col-md-10 mx-auto">
         <h3 class="mb-3">Kelola Aspirasi Warga</h3>
 
-        @if (session('success'))
-            <div class="alert alert-success">{{ session('success') }}</div>
-        @endif
+        <?php if(session('success')): ?>
+            <div class="alert alert-success"><?php echo e(session('success')); ?></div>
+        <?php endif; ?>
 
         <div class="table-responsive">
             <table class="table table-bordered table-striped align-middle">
@@ -24,76 +22,82 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($aspirasis as $index => $aspirasi)
+                    <?php $__empty_1 = true; $__currentLoopData = $aspirasis; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $aspirasi): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>{{ $aspirasi->judul }}</td>
-                            <td>{{ $aspirasi->user?->name ?? '-' }}</td>
+                            <td><?php echo e($index + 1); ?></td>
+                            <td><?php echo e($aspirasi->judul); ?></td>
+                            <td><?php echo e($aspirasi->user?->name ?? '-'); ?></td>
 
-                            {{-- FIX FORMAT TANGGAL SUPAYA TIDAK ERROR --}}
+                            
                             <td>
-                                {{ $aspirasi->tanggal_post 
+                                <?php echo e($aspirasi->tanggal_post 
                                     ? date('d-m-Y H:i', strtotime($aspirasi->tanggal_post)) 
-                                    : '-' 
-                                }}
+                                    : '-'); ?>
+
                             </td>
 
                             <td>
-                                @if ($aspirasi->status === 'submitted')
+                                <?php if($aspirasi->status === 'submitted'): ?>
                                     <span class="badge bg-warning text-dark">
-                                        {{ $aspirasi->status_label }}
+                                        <?php echo e($aspirasi->status_label); ?>
+
                                     </span>
-                                @elseif ($aspirasi->status === 'approved')
+                                <?php elseif($aspirasi->status === 'approved'): ?>
                                     <span class="badge bg-success">
-                                        {{ $aspirasi->status_label }}
+                                        <?php echo e($aspirasi->status_label); ?>
+
                                     </span>
-                                @elseif ($aspirasi->status === 'rejected')
+                                <?php elseif($aspirasi->status === 'rejected'): ?>
                                     <span class="badge bg-danger">
-                                        {{ $aspirasi->status_label }}
+                                        <?php echo e($aspirasi->status_label); ?>
+
                                     </span>
-                                @else
+                                <?php else: ?>
                                     <span class="badge bg-secondary">
-                                        {{ $aspirasi->status_label }}
+                                        <?php echo e($aspirasi->status_label); ?>
+
                                     </span>
-                                @endif
+                                <?php endif; ?>
                             </td>
 
                             <td>
-                                <a href="{{ route('admin.aspirasi.show', $aspirasi->id_aspirasi) }}"
+                                <a href="<?php echo e(route('admin.aspirasi.show', $aspirasi->id_aspirasi)); ?>"
                                    class="btn btn-info btn-sm">
                                     Detail
                                 </a>
 
-                                @if ($aspirasi->status === 'submitted')
+                                <?php if($aspirasi->status === 'submitted'): ?>
                                     <form method="POST"
-                                          action="{{ route('admin.aspirasi.approve', $aspirasi->id_aspirasi) }}"
+                                          action="<?php echo e(route('admin.aspirasi.approve', $aspirasi->id_aspirasi)); ?>"
                                           class="d-inline">
-                                        @csrf
+                                        <?php echo csrf_field(); ?>
                                         <button type="submit" class="btn btn-success btn-sm">
                                             Setujui
                                         </button>
                                     </form>
 
                                     <form method="POST"
-                                          action="{{ route('admin.aspirasi.reject', $aspirasi->id_aspirasi) }}"
+                                          action="<?php echo e(route('admin.aspirasi.reject', $aspirasi->id_aspirasi)); ?>"
                                           class="d-inline">
-                                        @csrf
+                                        <?php echo csrf_field(); ?>
                                         <button type="submit" class="btn btn-danger btn-sm">
                                             Tolak
                                         </button>
                                     </form>
-                                @endif
+                                <?php endif; ?>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="6" class="text-center">Belum ada aspirasi.</td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
 
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\php\New folder\WarVote\resources\views/admin/aspirasi/index.blade.php ENDPATH**/ ?>

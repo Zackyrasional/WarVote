@@ -1,20 +1,18 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'Dashboard Voting'); ?>
 
-@section('title', 'Dashboard Voting')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="row">
     <div class="col-md-10 mx-auto">
 
         <h3 class="mb-3">Dashboard Voting</h3>
-        <h4 class="mb-4">{{ $poll->title }}</h4>
+        <h4 class="mb-4"><?php echo e($poll->title); ?></h4>
 
         <div class="row mb-4">
             <div class="col-md-4">
                 <div class="card text-center">
                     <div class="card-body">
                         <h5>Total Suara Masuk</h5>
-                        <p class="display-6">{{ $totalVotes }}</p>
+                        <p class="display-6"><?php echo e($totalVotes); ?></p>
                     </div>
                 </div>
             </div>
@@ -22,9 +20,9 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5>Total Pemilih Unik</h5>
-                        <p class="display-6">{{ $totalVoters }}</p>
+                        <p class="display-6"><?php echo e($totalVoters); ?></p>
                         <small class="text-muted">
-                            {{ $percentage }}% dari {{ $totalUsers }} warga terdaftar
+                            <?php echo e($percentage); ?>% dari <?php echo e($totalUsers); ?> warga terdaftar
                         </small>
                     </div>
                 </div>
@@ -33,19 +31,20 @@
                 <div class="card text-center">
                     <div class="card-body">
                         <h5>Status Waktu</h5>
-                        @if($waktuHabis)
+                        <?php if($waktuHabis): ?>
                             <p class="text-danger fw-bold">Waktu voting selesai</p>
-                        @elseif($deadline)
+                        <?php elseif($deadline): ?>
                             <p class="mb-1">Sisa waktu:</p>
                             <p class="fw-bold">
-                                {{ $sisaJam }} jam {{ $sisaMenit }} menit
+                                <?php echo e($sisaJam); ?> jam <?php echo e($sisaMenit); ?> menit
                             </p>
                             <small class="text-muted">
-                                Sampai {{ date('d-m-Y H:i', strtotime((string) $deadline)) }}
+                                Sampai <?php echo e(date('d-m-Y H:i', strtotime((string) $deadline))); ?>
+
                             </small>
-                        @else
+                        <?php else: ?>
                             <p class="text-muted">Tidak ada batas waktu.</p>
-                        @endif
+                        <?php endif; ?>
                     </div>
                 </div>
             </div>
@@ -60,28 +59,30 @@
                 </tr>
             </thead>
             <tbody>
-                @foreach($poll->options as $opt)
-                    @php
+                <?php $__currentLoopData = $poll->options; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $opt): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php
                         $count = $opt->votes()->count();
-                    @endphp
+                    ?>
                     <tr>
-                        <td>{{ $opt->option_text }}</td>
-                        <td>{{ $count }}</td>
+                        <td><?php echo e($opt->option_text); ?></td>
+                        <td><?php echo e($count); ?></td>
                     </tr>
-                @endforeach
+                <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
             </tbody>
         </table>
 
-        {{-- Tombol Lihat Hasil Akhir hanya muncul jika waktu voting sudah habis / polling ditutup --}}
-        @if($waktuHabis)
-            <a href="{{ route('polls.result', $poll->id) }}" class="btn btn-success">
+        
+        <?php if($waktuHabis): ?>
+            <a href="<?php echo e(route('polls.result', $poll->id)); ?>" class="btn btn-success">
                 Lihat Hasil Akhir
             </a>
-        @endif
+        <?php endif; ?>
 
-        <a href="{{ route('home') }}" class="btn btn-secondary">
+        <a href="<?php echo e(route('home')); ?>" class="btn btn-secondary">
             Kembali ke Beranda
         </a>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\php\New folder\WarVote\resources\views/polls/dashboard.blade.php ENDPATH**/ ?>

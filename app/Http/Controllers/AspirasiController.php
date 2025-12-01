@@ -7,24 +7,23 @@ use Illuminate\Http\Request;
 
 class AspirasiController extends Controller
 {
-    // Halaman daftar aspirasi untuk semua user (hanya yang sudah disetujui)
-    public function index()
+    // Daftar aspirasi yang sudah disetujui (untuk warga)
+    public function indexApproved()
     {
-        $aspirasis = Aspirasi::with('user')
-            ->where('status', 'approved')
-            ->latest()
-            ->paginate(10);
+        $aspirasis = Aspirasi::where('status', 'approved')
+            ->orderBy('tanggal_post', 'desc')
+            ->get();
 
         return view('aspirasi.index', compact('aspirasis'));
     }
 
-    // Form buat aspirasi (warga)
+    // Form pengajuan aspirasi (warga)
     public function create()
     {
         return view('aspirasi.create');
     }
 
-    // Simpan aspirasi baru (warga)
+    // Simpan aspirasi baru
     public function store(Request $request)
     {
         $data = $request->validate([
@@ -33,55 +32,30 @@ class AspirasiController extends Controller
         ]);
 
         Aspirasi::create([
-            'id_user'      => auth()->id(),
+            'id_user'      => auth()->user()->id_user,
             'judul'        => $data['judul'],
             'deskripsi'    => $data['deskripsi'],
             'status'       => 'submitted',
             'tanggal_post' => now(),
         ]);
 
-        return redirect()
-            ->route('aspirasi.index')
-            ->with('success', 'Aspirasi berhasil dikirim, menunggu persetujuan admin.');
+        return redirect()->route('aspirasi.index')
+            ->with('success', 'Aspirasi berhasil diajukan dan menunggu persetujuan admin.');
     }
 
-    // Detail aspirasi (untuk voting dan melihat isi lengkap)
-    public function show($id)
+    // Detail aspirasi (hanya boleh lihat jika approved atau milik sendiri atau admin)
+    public function show(Aspirasi $aspirasi)
     {
-        $aspirasi = Aspirasi::with('user', 'votings')->findOrFail($id);
+        $user = auth()->user();
+
+        if (
+            $aspirasi->status !== 'approved' &&
+            $user->role !== 'admin' &&
+            $aspirasi->id_user !== $user->id_user
+        ) {
+            abort(403, 'Anda tidak berhak melihat aspirasi ini.');
+        }
 
         return view('aspirasi.show', compact('aspirasi'));
-    }
-
-    // ========== BAGIAN ADMIN ==========
-
-    // Daftar semua aspirasi (admin) untuk dikelola
-    public function adminIndex()
-    {
-        $aspirasis = Aspirasi::with('user')
-            ->latest()
-            ->paginate(10);
-
-        return view('admin.aspirasi.index', compact('aspirasis'));
-    }
-
-    // Admin menyetujui aspirasi
-    public function approve($id)
-    {
-        $aspirasi = Aspirasi::findOrFail($id);
-        $aspirasi->status = 'approved';
-        $aspirasi->save();
-
-        return back()->with('success', 'Aspirasi berhasil disetujui.');
-    }
-
-    // Admin menolak aspirasi
-    public function reject($id)
-    {
-        $aspirasi = Aspirasi::findOrFail($id);
-        $aspirasi->status = 'rejected';
-        $aspirasi->save();
-
-        return back()->with('success', 'Aspirasi berhasil ditolak.');
     }
 }

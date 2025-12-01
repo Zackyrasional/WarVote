@@ -1,29 +1,29 @@
-@extends('layouts.app')
+<?php $__env->startSection('title', 'Kelola Polling'); ?>
 
-@section('title', 'Kelola Polling')
-
-@section('content')
+<?php $__env->startSection('content'); ?>
 <div class="row">
     <div class="col-md-10 mx-auto">
         <div class="d-flex justify-content-between align-items-center mb-3">
             <h3>Kelola Polling</h3>
 
-            <a href="{{ route('admin.polls.create') }}" class="btn btn-primary">
+            <a href="<?php echo e(route('admin.polls.create')); ?>" class="btn btn-primary">
                 + Buat Polling Baru
             </a>
         </div>
 
-        @if (session('success'))
+        <?php if(session('success')): ?>
             <div class="alert alert-success">
-                {{ session('success') }}
-            </div>
-        @endif
+                <?php echo e(session('success')); ?>
 
-        @if (session('error'))
-            <div class="alert alert-danger">
-                {{ session('error') }}
             </div>
-        @endif
+        <?php endif; ?>
+
+        <?php if(session('error')): ?>
+            <div class="alert alert-danger">
+                <?php echo e(session('error')); ?>
+
+            </div>
+        <?php endif; ?>
 
         <div class="table-responsive">
             <table class="table table-bordered table-striped align-middle">
@@ -37,92 +37,99 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @forelse ($polls as $index => $poll)
+                    <?php $__empty_1 = true; $__currentLoopData = $polls; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $index => $poll): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <tr>
-                            <td>{{ $index + 1 }}</td>
-                            <td>{{ $poll->title }}</td>
+                            <td><?php echo e($index + 1); ?></td>
+                            <td><?php echo e($poll->title); ?></td>
 
-                            {{-- STATUS POLLING (INDONESIA) --}}
+                            
                             <td>
-                                @if ($poll->is_closed)
+                                <?php if($poll->is_closed): ?>
                                     <span class="badge bg-secondary">
                                         Ditutup
                                     </span>
-                                @else
-                                    @if ($poll->status === 'approved')
+                                <?php else: ?>
+                                    <?php if($poll->status === 'approved'): ?>
                                         <span class="badge bg-success">
-                                            {{ $poll->status_label }}
+                                            <?php echo e($poll->status_label); ?>
+
                                         </span>
-                                    @elseif ($poll->status === 'pending')
+                                    <?php elseif($poll->status === 'pending'): ?>
                                         <span class="badge bg-warning text-dark">
-                                            {{ $poll->status_label }}
+                                            <?php echo e($poll->status_label); ?>
+
                                         </span>
-                                    @elseif ($poll->status === 'rejected')
+                                    <?php elseif($poll->status === 'rejected'): ?>
                                         <span class="badge bg-danger">
-                                            {{ $poll->status_label }}
+                                            <?php echo e($poll->status_label); ?>
+
                                         </span>
-                                    @else
+                                    <?php else: ?>
                                         <span class="badge bg-secondary">
-                                            {{ $poll->status_label }}
+                                            <?php echo e($poll->status_label); ?>
+
                                         </span>
-                                    @endif
-                                @endif
+                                    <?php endif; ?>
+                                <?php endif; ?>
                             </td>
 
-                            {{-- BATAS WAKTU (TANPA ->format(), PAKAI date()+strtotime) --}}
+                            
                             <td>
-                                @if ($poll->deadline)
-                                    {{ date('d-m-Y H:i', strtotime((string) $poll->deadline)) }}
-                                @else
+                                <?php if($poll->deadline): ?>
+                                    <?php echo e(date('d-m-Y H:i', strtotime((string) $poll->deadline))); ?>
+
+                                <?php else: ?>
                                     Tidak dibatasi
-                                @endif
+                                <?php endif; ?>
                             </td>
 
                             <td>
-                                {{-- Edit polling: HANYA JIKA BELUM DITUTUP --}}
-                                @if (! $poll->is_closed)
-                                    <a href="{{ route('admin.polls.edit', $poll->id) }}"
+                                
+                                <?php if(! $poll->is_closed): ?>
+                                    <a href="<?php echo e(route('admin.polls.edit', $poll->id)); ?>"
                                        class="btn btn-primary btn-sm">
                                         Edit
                                     </a>
-                                @endif
+                                <?php endif; ?>
 
-                                {{-- Tutup polling (sekali tutup, tidak bisa buka lagi) --}}
-                                @if (! $poll->is_closed)
+                                
+                                <?php if(! $poll->is_closed): ?>
                                     <form method="POST"
-                                          action="{{ route('admin.polls.close', $poll->id) }}"
+                                          action="<?php echo e(route('admin.polls.close', $poll->id)); ?>"
                                           class="d-inline"
                                           onsubmit="return confirm('Tutup polling ini sekarang? Pemilih tidak bisa mengirim suara lagi, tetapi hasil tetap bisa dilihat.')">
-                                        @csrf
+                                        <?php echo csrf_field(); ?>
                                         <button type="submit" class="btn btn-warning btn-sm">
                                             Tutup Polling
                                         </button>
                                     </form>
-                                @endif
+                                <?php endif; ?>
 
-                                {{-- Hapus polling --}}
+                                
                                 <form method="POST"
-                                      action="{{ route('admin.polls.destroy', $poll->id) }}"
+                                      action="<?php echo e(route('admin.polls.destroy', $poll->id)); ?>"
                                       class="d-inline"
                                       onsubmit="return confirm('Hapus polling ini beserta semua suara?')">
-                                    @csrf
-                                    @method('DELETE')
+                                    <?php echo csrf_field(); ?>
+                                    <?php echo method_field('DELETE'); ?>
                                     <button type="submit" class="btn btn-danger btn-sm">
                                         Hapus
                                     </button>
                                 </form>
                             </td>
                         </tr>
-                    @empty
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
                         <tr>
                             <td colspan="5" class="text-center">
                                 Belum ada polling yang dibuat.
                             </td>
                         </tr>
-                    @endforelse
+                    <?php endif; ?>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
-@endsection
+<?php $__env->stopSection(); ?>
+
+<?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\php\New folder\WarVote\resources\views/admin/polls/index.blade.php ENDPATH**/ ?>

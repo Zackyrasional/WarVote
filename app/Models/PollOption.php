@@ -6,6 +6,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class PollOption extends Model
 {
+    // Kalau tidak pakai HasFactory, tidak apa-apa
     protected $table = 'poll_options';
 
     protected $fillable = [
@@ -15,7 +16,7 @@ class PollOption extends Model
 
     public function poll()
     {
-        return $this->belongsTo(Poll::class);
+        return $this->belongsTo(Poll::class, 'poll_id');
     }
 
     public function votes()
