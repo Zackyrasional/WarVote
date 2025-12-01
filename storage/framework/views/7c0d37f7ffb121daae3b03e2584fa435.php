@@ -9,6 +9,13 @@
         </div>
     <?php endif; ?>
 
+    <?php if(session('error')): ?>
+        <div class="alert alert-danger">
+            <?php echo e(session('error')); ?>
+
+        </div>
+    <?php endif; ?>
+
     <?php if($errors->any()): ?>
         <div class="alert alert-danger">
             <p>Terjadi kesalahan pada input:</p>
@@ -49,7 +56,7 @@ $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?>
-                        <div class="invalid-feedback"><?php echo e($error); ?></div>
+                        <div class="invalid-feedback"><?php echo e($message); ?></div>
                     <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
@@ -76,13 +83,12 @@ unset($__errorArgs, $__bag); ?>
                 <?php
                     use Illuminate\Support\Carbon;
 
-                    // Nilai awal untuk input datetime-local
                     $deadlineValue = old('deadline');
 
                     if (!$deadlineValue && $poll->deadline) {
                         try {
-                            // Paksa parse, baik string maupun Carbon tetap aman
-                            $deadlineValue = Carbon::parse($poll->deadline)->format('Y-m-d\TH:i');
+                            $deadlineValue = Carbon::parse($poll->deadline)
+                                ->format('Y-m-d\TH:i');
                         } catch (\Exception $e) {
                             $deadlineValue = '';
                         }
@@ -121,6 +127,77 @@ unset($__errorArgs, $__bag); ?>
 
                 
                 <div class="mb-3">
+                    <label class="form-label">Pilihan Suara</label>
+
+                    <p class="text-muted mb-2">
+                        Anda dapat mengubah teks pilihan, menambah pilihan baru,
+                        atau menghapus pilihan dengan mengosongkan isinya.
+                        Minimal harus ada 2 pilihan yang terisi.
+                    </p>
+
+                    <?php
+                        // Data lama dari old() jika validasi gagal
+                        $oldOptions    = old('options');
+                        $oldOptionIds  = old('option_ids');
+                        $useOld        = is_array($oldOptions);
+
+                        if ($useOld) {
+                            $pairs = [];
+                            foreach ($oldOptions as $i => $text) {
+                                $pairs[] = [
+                                    'id'   => $oldOptionIds[$i] ?? null,
+                                    'text' => $text,
+                                ];
+                            }
+                        } else {
+                            // Ambil dari database (opsi yang sudah ada)
+                            $pairs = [];
+                            foreach ($poll->options as $opt) {
+                                $pairs[] = [
+                                    'id'   => $opt->id,
+                                    'text' => $opt->option_text,
+                                ];
+                            }
+                            // Tambah 2 baris kosong untuk opsi baru
+                            $pairs[] = ['id' => null, 'text' => ''];
+                            $pairs[] = ['id' => null, 'text' => ''];
+                        }
+                    ?>
+
+                    <?php $__currentLoopData = $pairs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $pair): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                        <div class="input-group mb-2">
+                            <input type="hidden" name="option_ids[]" value="<?php echo e($pair['id']); ?>">
+                            <input
+                                type="text"
+                                name="options[]"
+                                class="form-control <?php $__errorArgs = ['options.*'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>"
+                                value="<?php echo e($pair['text']); ?>"
+                                placeholder="Tulis pilihan suara..."
+                            >
+                        </div>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
+
+                    <?php $__errorArgs = ['options'];
+$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
+if ($__bag->has($__errorArgs[0])) :
+if (isset($message)) { $__messageOriginal = $message; }
+$message = $__bag->first($__errorArgs[0]); ?>
+                        <div class="text-danger small mt-1"><?php echo e($message); ?></div>
+                    <?php unset($message);
+if (isset($__messageOriginal)) { $message = $__messageOriginal; }
+endif;
+unset($__errorArgs, $__bag); ?>
+                </div>
+
+                
+                <div class="mb-3">
                     <label class="form-label d-block">Status Polling</label>
                     <span class="badge
                         <?php if($poll->status === 'approved'): ?> bg-success
@@ -140,14 +217,6 @@ unset($__errorArgs, $__bag); ?>
                     <?php else: ?>
                         <span class="badge bg-primary">Sedang Berjalan</span>
                     <?php endif; ?>
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label d-block">Informasi Pilihan</label>
-                    <small class="text-muted">
-                        Pengelolaan pilihan (tambah/hapus opsi) tidak dilakukan di form ini.
-                        Opsi tetap seperti saat polling dibuat.
-                    </small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Simpan Perubahan</button>

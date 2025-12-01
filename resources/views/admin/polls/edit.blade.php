@@ -10,6 +10,12 @@
         </div>
     @endif
 
+    @if (session('error'))
+        <div class="alert alert-danger">
+            {{ session('error') }}
+        </div>
+    @endif
+
     @if ($errors->any())
         <div class="alert alert-danger">
             <p>Terjadi kesalahan pada input:</p>
@@ -39,7 +45,7 @@
                         required
                     >
                     @error('title')
-                        <div class="invalid-feedback">{{ $error }}</div>
+                        <div class="invalid-feedback">{{ $message }}</div>
                     @enderror
                 </div>
 
@@ -62,13 +68,12 @@
                 @php
                     use Illuminate\Support\Carbon;
 
-                    // Nilai awal untuk input datetime-local
                     $deadlineValue = old('deadline');
 
                     if (!$deadlineValue && $poll->deadline) {
                         try {
-                            // Paksa parse, baik string maupun Carbon tetap aman
-                            $deadlineValue = Carbon::parse($poll->deadline)->format('Y-m-d\TH:i');
+                            $deadlineValue = Carbon::parse($poll->deadline)
+                                ->format('Y-m-d\TH:i');
                         } catch (\Exception $e) {
                             $deadlineValue = '';
                         }
@@ -91,7 +96,64 @@
                     @enderror
                 </div>
 
-                {{-- Informasi status dan opsi (hanya informasi, tidak diubah di sini) --}}
+                {{-- Opsi polling --}}
+                <div class="mb-3">
+                    <label class="form-label">Pilihan Suara</label>
+
+                    <p class="text-muted mb-2">
+                        Anda dapat mengubah teks pilihan, menambah pilihan baru,
+                        atau menghapus pilihan dengan mengosongkan isinya.
+                        Minimal harus ada 2 pilihan yang terisi.
+                    </p>
+
+                    @php
+                        // Data lama dari old() jika validasi gagal
+                        $oldOptions    = old('options');
+                        $oldOptionIds  = old('option_ids');
+                        $useOld        = is_array($oldOptions);
+
+                        if ($useOld) {
+                            $pairs = [];
+                            foreach ($oldOptions as $i => $text) {
+                                $pairs[] = [
+                                    'id'   => $oldOptionIds[$i] ?? null,
+                                    'text' => $text,
+                                ];
+                            }
+                        } else {
+                            // Ambil dari database (opsi yang sudah ada)
+                            $pairs = [];
+                            foreach ($poll->options as $opt) {
+                                $pairs[] = [
+                                    'id'   => $opt->id,
+                                    'text' => $opt->option_text,
+                                ];
+                            }
+                            // Tambah 2 baris kosong untuk opsi baru
+                            $pairs[] = ['id' => null, 'text' => ''];
+                            $pairs[] = ['id' => null, 'text' => ''];
+                        }
+                    @endphp
+
+                    @foreach ($pairs as $pair)
+                        <div class="input-group mb-2">
+                            <input type="hidden" name="option_ids[]" value="{{ $pair['id'] }}">
+                            <input
+                                type="text"
+                                name="options[]"
+                                class="form-control @error('options.*') is-invalid @enderror"
+                                value="{{ $pair['text'] }}"
+                                placeholder="Tulis pilihan suara..."
+                            >
+                        </div>
+                    @endforeach
+
+                    @error('options')
+                        <div class="text-danger small mt-1">{{ $message }}</div>
+                    @enderror
+                </div>
+
+                {{-- Status & kondisi (informasi saja) --}}
                 <div class="mb-3">
                     <label class="form-label d-block">Status Polling</label>
                     <span class="badge
@@ -111,14 +173,6 @@
                     @else
                         <span class="badge bg-primary">Sedang Berjalan</span>
                     @endif
-                </div>
-
-                <div class="mb-3">
-                    <label class="form-label d-block">Informasi Pilihan</label>
-                    <small class="text-muted">
-                        Pengelolaan pilihan (tambah/hapus opsi) tidak dilakukan di form ini.
-                        Opsi tetap seperti saat polling dibuat.
-                    </small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
