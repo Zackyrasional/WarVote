@@ -8,63 +8,71 @@ use App\Models\Poll;
 use App\Models\PollOption;
 use App\Models\PollVote;
 use Illuminate\Http\Request;
-use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\DB;
 
 class AdminController extends Controller
 {
+    /*
+    |--------------------------------------------------------------------------
+    | DASHBOARD ADMIN
+    |--------------------------------------------------------------------------
+    */
+
     public function dashboard()
     {
         $totalUsers  = User::count();
         $totalPolls  = Poll::count();
         $totalVotes  = PollVote::count();
-        $totalAsp    = Aspirasi::count();
 
         return view('admin.dashboard', compact(
             'totalUsers',
             'totalPolls',
-            'totalVotes',
-            'totalAsp'
+            'totalVotes'
         ));
     }
 
     /*
-     * ASPIRASI
-     */
+    |--------------------------------------------------------------------------
+    | KELOLA ASPIRASI
+    |--------------------------------------------------------------------------
+    */
 
+    // Daftar semua aspirasi untuk admin
     public function aspirasiIndex()
     {
         $aspirasis = Aspirasi::with('user')
-            ->orderBy('tanggal_post', 'desc')
+            ->orderByDesc('tanggal_post')
             ->get();
 
         return view('admin.aspirasi.index', compact('aspirasis'));
     }
 
+    // Detail aspirasi
     public function aspirasiShow(Aspirasi $aspirasi)
     {
+        // relasi user sudah di-load otomatis jika dipanggil dari index
         $aspirasi->load('user');
 
         return view('admin.aspirasi.show', compact('aspirasi'));
     }
 
+    // Setujui aspirasi
     public function aspirasiApprove(Aspirasi $aspirasi)
     {
-        if ($aspirasi->status !== 'approved') {
-            $aspirasi->status = 'approved';
-            $aspirasi->save();
-        }
+        $aspirasi->status = 'approved';
+        $aspirasi->save();
 
         return redirect()
             ->route('admin.aspirasi.index')
             ->with('success', 'Aspirasi berhasil disetujui.');
     }
 
+    // Tolak aspirasi
     public function aspirasiReject(Aspirasi $aspirasi)
     {
-        if ($aspirasi->status !== 'rejected') {
-            $aspirasi->status = 'rejected';
-            $aspirasi->save();
-        }
+        $aspirasi->status = 'rejected';
+        $aspirasi->save();
 
         return redirect()
             ->route('admin.aspirasi.index')
@@ -72,204 +80,138 @@ class AdminController extends Controller
     }
 
     /*
-     * POLLING
-     */
+    |--------------------------------------------------------------------------
+    | KELOLA POLLING
+    |--------------------------------------------------------------------------
+    */
 
+    // List semua polling
     public function pollIndex()
     {
         $polls = Poll::with('creator')
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
             ->get();
 
         return view('admin.polls.index', compact('polls'));
     }
 
+    // Form buat polling baru
     public function pollCreate()
     {
         return view('admin.polls.create');
     }
 
+    // Simpan polling baru
     public function pollStore(Request $request)
     {
         $request->validate([
             'title'          => ['required', 'string', 'max:255'],
             'deadline'       => ['nullable', 'date'],
-            'allow_multiple' => ['nullable', 'in:0,1'],
+            'allow_multiple' => ['nullable', 'boolean'],
             'options'        => ['required', 'array', 'min:2'],
             'options.*'      => ['nullable', 'string', 'max:255'],
         ]);
 
-        $rawOptions = $request->input('options', []);
-
         // Bersihkan opsi kosong
-        $cleanOptions = [];
-        foreach ($rawOptions as $text) {
-            $text = trim((string)$text);
-            if ($text !== '') {
-                $cleanOptions[] = $text;
-            }
-        }
+        $options = collect($request->input('options', []))
+            ->map(fn ($text) => $text !== null ? trim($text) : '')
+            ->filter(fn ($text) => $text !== '')
+            ->values();
 
-        if (count($cleanOptions) < 2) {
+        if ($options->count() < 2) {
             return back()
-                ->withErrors(['options' => 'Minimal harus ada 2 pilihan suara.'])
-                ->withInput();
+                ->withInput()
+                ->withErrors([
+                    'options' => 'Minimal harus ada 2 opsi yang terisi.',
+                ]);
         }
 
-        $poll = Poll::create([
-            'title'          => $request->input('title'),
-            'allow_multiple' => $request->filled('allow_multiple') ? 1 : 0,
-            'deadline'       => $request->input('deadline') ?: null,
-            'created_by'     => auth()->user()->id_user,
-            'status'         => 'approved',   // admin membuat -> langsung aktif
-            'is_closed'      => false,
-        ]);
-
-        foreach ($cleanOptions as $text) {
-            PollOption::create([
-                'poll_id'     => $poll->id,
-                'option_text' => $text,
+        DB::transaction(function () use ($request, $options) {
+            $poll = Poll::create([
+                'title'          => $request->input('title'),
+                'allow_multiple' => $request->boolean('allow_multiple'),
+                'deadline'       => $request->input('deadline'), // bisa null
+                'created_by'     => Auth::user()->id_user,
+                'status'         => 'approved', // polling yang dibuat admin langsung aktif
+                'is_closed'      => false,
             ]);
-        }
+
+            foreach ($options as $text) {
+                PollOption::create([
+                    'poll_id'     => $poll->id,
+                    'option_text' => $text,
+                ]);
+            }
+        });
 
         return redirect()
             ->route('admin.polls.index')
             ->with('success', 'Polling baru berhasil dibuat.');
     }
 
+    // Form edit polling
     public function pollEdit(Poll $poll)
     {
-        // Jika sudah ditutup, tidak boleh diedit
-        if ($poll->is_closed) {
-            return redirect()
-                ->route('admin.polls.index')
-                ->with('error', 'Polling sudah ditutup dan tidak dapat diedit.');
-        }
-
-        $poll->load('options', 'creator');
+        // polling + creator + options
+        $poll->load('creator', 'options');
 
         return view('admin.polls.edit', compact('poll'));
     }
 
+    // Update polling (judul, deadline, allow_multiple saja)
     public function pollUpdate(Request $request, Poll $poll)
     {
-        // Cegah perubahan jika polling sudah ditutup
-        if ($poll->is_closed) {
-            return back()
-                ->with('error', 'Polling sudah ditutup dan tidak dapat diubah.')
-                ->withInput();
-        }
-
         $request->validate([
             'title'          => ['required', 'string', 'max:255'],
-            'allow_multiple' => ['nullable', 'in:0,1'],
             'deadline'       => ['nullable', 'date'],
-            'options'        => ['required', 'array'],
-            'options.*'      => ['nullable', 'string', 'max:255'],
-            'option_ids'     => ['array'],
+            'allow_multiple' => ['nullable', 'boolean'],
         ]);
 
-        $rawOptions = $request->input('options', []);
-        $optionIds  = $request->input('option_ids', []);
-
-        // Hitung opsi yang tidak kosong
-        $cleanOptions = [];
-        foreach ($rawOptions as $i => $text) {
-            $text = trim((string)$text);
-            if ($text !== '') {
-                $cleanOptions[$i] = $text;
-            }
-        }
-
-        if (count($cleanOptions) < 2) {
-            return back()
-                ->withErrors(['options' => 'Minimal harus ada 2 pilihan suara.'])
-                ->withInput();
-        }
-
-        // Update data polling
-        $poll->title          = $request->input('title');
-        $poll->allow_multiple = $request->filled('allow_multiple') ? 1 : 0;
-        $poll->deadline       = $request->input('deadline') ?: null;
-        $poll->save();
-
-        // Kelola opsi
-        $keptIds = [];
-
-        foreach ($rawOptions as $i => $text) {
-            $text = trim((string)$text);
-            $id   = $optionIds[$i] ?? null;
-
-            // Jika teks kosong -> hapus opsi lama (jika ada id)
-            if ($text === '') {
-                if ($id) {
-                    PollOption::where('poll_id', $poll->id)
-                        ->where('id', $id)
-                        ->delete();
-                }
-                continue;
-            }
-
-            // Jika ada id -> update opsi
-            if ($id) {
-                $option = PollOption::where('poll_id', $poll->id)
-                    ->where('id', $id)
-                    ->first();
-
-                if ($option) {
-                    $option->option_text = $text;
-                    $option->save();
-                    $keptIds[] = $option->id;
-                }
-            } else {
-                // Jika tidak ada id -> buat opsi baru
-                $option = PollOption::create([
-                    'poll_id'     => $poll->id,
-                    'option_text' => $text,
-                ]);
-                $keptIds[] = $option->id;
-            }
-        }
+        $poll->update([
+            'title'          => $request->input('title'),
+            'allow_multiple' => $request->boolean('allow_multiple'),
+            'deadline'       => $request->input('deadline'),
+        ]);
 
         return redirect()
             ->route('admin.polls.index')
             ->with('success', 'Polling berhasil diperbarui.');
     }
 
-    public function pollClose(Poll $poll)
+    // Hapus polling (dan seluruh vote + options terkait)
+    public function pollDestroy(Poll $poll)
     {
-        if (!$poll->is_closed) {
-            $poll->is_closed = true;
-            $poll->save();
-        }
-
-        return redirect()
-            ->route('admin.polls.index')
-            ->with('success', 'Polling berhasil ditutup. Warga tetap dapat melihat hasil akhirnya.');
-    }
-
-    public function pollReopen(Poll $poll)
-    {
-        if ($poll->is_closed) {
-            $poll->is_closed = false;
-            $poll->save();
-        }
-
-        return redirect()
-            ->route('admin.polls.index')
-            ->with('success', 'Polling berhasil dibuka kembali.');
-    }
-
-    public function pollDelete(Poll $poll)
-    {
-        // Hapus semua suara dan opsi dulu
-        PollVote::where('poll_id', $poll->id)->delete();
-        PollOption::where('poll_id', $poll->id)->delete();
-
-        $poll->delete();
+        DB::transaction(function () use ($poll) {
+            // hapus suara dan opsi terkait, kemudian polling-nya
+            PollVote::where('poll_id', $poll->id)->delete();
+            PollOption::where('poll_id', $poll->id)->delete();
+            $poll->delete();
+        });
 
         return redirect()
             ->route('admin.polls.index')
             ->with('success', 'Polling berhasil dihapus.');
+    }
+
+    // Tutup paksa polling (warga sudah tidak bisa vote, tapi hasil tetap bisa dilihat)
+    public function pollClose(Poll $poll)
+    {
+        $poll->is_closed = true;
+        $poll->save();
+
+        return redirect()
+            ->route('admin.polls.index')
+            ->with('success', 'Polling berhasil ditutup.');
+    }
+
+    // Buka kembali polling (selama belum lewat deadline)
+    public function pollReopen(Poll $poll)
+    {
+        $poll->is_closed = false;
+        $poll->save();
+
+        return redirect()
+            ->route('admin.polls.index')
+            ->with('success', 'Polling berhasil dibuka kembali.');
     }
 }
