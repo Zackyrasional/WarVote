@@ -1,6 +1,9 @@
+<?php $__env->startSection('title', 'Edit Polling'); ?>
+
 <?php $__env->startSection('content'); ?>
-<div class="container">
-    <h1 class="mb-4">Edit Polling</h1>
+<div class="container mt-4">
+
+    <h4 class="mb-3">Edit Polling</h4>
 
     <?php if(session('success')): ?>
         <div class="alert alert-success">
@@ -9,16 +12,9 @@
         </div>
     <?php endif; ?>
 
-    <?php if(session('error')): ?>
-        <div class="alert alert-danger">
-            <?php echo e(session('error')); ?>
-
-        </div>
-    <?php endif; ?>
-
     <?php if($errors->any()): ?>
         <div class="alert alert-danger">
-            <p>Terjadi kesalahan pada input:</p>
+            <strong>Terjadi kesalahan:</strong>
             <ul class="mb-0">
                 <?php $__currentLoopData = $errors->all(); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $error): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
                     <li><?php echo e($error); ?></li>
@@ -36,10 +32,9 @@
 
                 
                 <div class="mb-3">
-                    <label class="form-label">Judul / Tujuan Polling</label>
+                    <label class="form-label">Judul Polling</label>
                     <input
                         type="text"
-                        name="title"
                         class="form-control <?php $__errorArgs = ['title'];
 $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
@@ -48,6 +43,7 @@ $message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>"
+                        name="title"
                         value="<?php echo e(old('title', $poll->title)); ?>"
                         required
                     >
@@ -56,7 +52,7 @@ $__bag = $errors->getBag($__errorArgs[1] ?? 'default');
 if ($__bag->has($__errorArgs[0])) :
 if (isset($message)) { $__messageOriginal = $message; }
 $message = $__bag->first($__errorArgs[0]); ?>
-                        <div class="invalid-feedback"><?php echo e($message); ?></div>
+                        <div class="invalid-feedback"><?php echo e($error); ?></div>
                     <?php unset($message);
 if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
@@ -70,31 +66,15 @@ unset($__errorArgs, $__bag); ?>
                         class="form-check-input"
                         id="allow_multiple"
                         name="allow_multiple"
-                        value="1"
                         <?php echo e(old('allow_multiple', $poll->allow_multiple) ? 'checked' : ''); ?>
 
                     >
-                    <label class="form-check-label" for="allow_multiple">
-                        Izinkan beberapa pilihan
+                    <label for="allow_multiple" class="form-check-label">
+                        Izinkan memilih lebih dari satu opsi
                     </label>
                 </div>
 
                 
-                <?php
-                    use Illuminate\Support\Carbon;
-
-                    $deadlineValue = old('deadline');
-
-                    if (!$deadlineValue && $poll->deadline) {
-                        try {
-                            $deadlineValue = Carbon::parse($poll->deadline)
-                                ->format('Y-m-d\TH:i');
-                        } catch (\Exception $e) {
-                            $deadlineValue = '';
-                        }
-                    }
-                ?>
-
                 <div class="mb-3">
                     <label class="form-label">Tanggal Berakhir (opsional)</label>
                     <input
@@ -108,7 +88,7 @@ if (isset($__messageOriginal)) { $message = $__messageOriginal; }
 endif;
 unset($__errorArgs, $__bag); ?>"
                         name="deadline"
-                        value="<?php echo e($deadlineValue); ?>"
+                        value="<?php echo e(old('deadline', $poll->deadline ? \Carbon\Carbon::parse($poll->deadline)->format('Y-m-d\TH:i') : '')); ?>"
                     >
                     <small class="text-muted">
                         Kosongkan jika polling tidak memiliki batas waktu.
@@ -127,96 +107,65 @@ unset($__errorArgs, $__bag); ?>
 
                 
                 <div class="mb-3">
-                    <label class="form-label">Pilihan Suara</label>
+                    <label class="form-label d-block">Opsi yang Sudah Ada</label>
 
-                    <p class="text-muted mb-2">
-                        Anda dapat mengubah teks pilihan, menambah pilihan baru,
-                        atau menghapus pilihan dengan mengosongkan isinya.
-                        Minimal harus ada 2 pilihan yang terisi.
-                    </p>
-
-                    <?php
-                        // Data lama dari old() jika validasi gagal
-                        $oldOptions    = old('options');
-                        $oldOptionIds  = old('option_ids');
-                        $useOld        = is_array($oldOptions);
-
-                        if ($useOld) {
-                            $pairs = [];
-                            foreach ($oldOptions as $i => $text) {
-                                $pairs[] = [
-                                    'id'   => $oldOptionIds[$i] ?? null,
-                                    'text' => $text,
-                                ];
-                            }
-                        } else {
-                            // Ambil dari database (opsi yang sudah ada)
-                            $pairs = [];
-                            foreach ($poll->options as $opt) {
-                                $pairs[] = [
-                                    'id'   => $opt->id,
-                                    'text' => $opt->option_text,
-                                ];
-                            }
-                            // Tambah 2 baris kosong untuk opsi baru
-                            $pairs[] = ['id' => null, 'text' => ''];
-                            $pairs[] = ['id' => null, 'text' => ''];
-                        }
-                    ?>
-
-                    <?php $__currentLoopData = $pairs; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $pair): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                    <?php $__empty_1 = true; $__currentLoopData = $poll->options; $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $option): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); $__empty_1 = false; ?>
                         <div class="input-group mb-2">
-                            <input type="hidden" name="option_ids[]" value="<?php echo e($pair['id']); ?>">
+                            <span class="input-group-text">Opsi</span>
                             <input
                                 type="text"
-                                name="options[]"
-                                class="form-control <?php $__errorArgs = ['options.*'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?> is-invalid <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>"
-                                value="<?php echo e($pair['text']); ?>"
-                                placeholder="Tulis pilihan suara..."
+                                name="options_existing[<?php echo e($option->id); ?>]"
+                                class="form-control"
+                                value="<?php echo e(old('options_existing.' . $option->id, $option->option_text)); ?>"
                             >
+                            <span class="input-group-text">
+                                <?php
+                                    $hasVotes = \App\Models\PollVote::where('option_id', $option->id)->exists();
+                                ?>
+                                <?php if($hasVotes): ?>
+                                    Tidak bisa dihapus (sudah ada suara)
+                                <?php else: ?>
+                                    Kosongkan teks untuk menghapus
+                                <?php endif; ?>
+                            </span>
                         </div>
-                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
-
-                    <?php $__errorArgs = ['options'];
-$__bag = $errors->getBag($__errorArgs[1] ?? 'default');
-if ($__bag->has($__errorArgs[0])) :
-if (isset($message)) { $__messageOriginal = $message; }
-$message = $__bag->first($__errorArgs[0]); ?>
-                        <div class="text-danger small mt-1"><?php echo e($message); ?></div>
-                    <?php unset($message);
-if (isset($__messageOriginal)) { $message = $__messageOriginal; }
-endif;
-unset($__errorArgs, $__bag); ?>
+                    <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); if ($__empty_1): ?>
+                        <p class="text-muted">Belum ada opsi pada polling ini.</p>
+                    <?php endif; ?>
                 </div>
 
                 
                 <div class="mb-3">
-                    <label class="form-label d-block">Status Polling</label>
-                    <span class="badge
-                        <?php if($poll->status === 'approved'): ?> bg-success
-                        <?php elseif($poll->status === 'rejected'): ?> bg-danger
-                        <?php else: ?> bg-warning text-dark
+                    <label class="form-label d-block">Tambah Opsi Baru</label>
+                    <div id="new-options-container">
+                        
+                        <?php if(is_array(old('options_new'))): ?>
+                            <?php $__currentLoopData = old('options_new'); $__env->addLoop($__currentLoopData); foreach($__currentLoopData as $text): $__env->incrementLoopIndices(); $loop = $__env->getLastLoop(); ?>
+                                <div class="input-group mb-2">
+                                    <span class="input-group-text">Opsi Baru</span>
+                                    <input
+                                        type="text"
+                                        name="options_new[]"
+                                        class="form-control"
+                                        value="<?php echo e($text); ?>"
+                                    >
+                                </div>
+                            <?php endforeach; $__env->popLoop(); $loop = $__env->getLastLoop(); ?>
                         <?php endif; ?>
-                    ">
-                        <?php echo e($poll->status_label); ?>
-
-                    </span>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary btn-sm" id="btn-add-option">
+                        + Tambah Opsi Baru
+                    </button>
+                    <small class="d-block text-muted mt-1">
+                        Anda dapat menambahkan beberapa opsi baru di sini.
+                    </small>
                 </div>
 
+                
                 <div class="mb-3">
-                    <label class="form-label d-block">Kondisi Polling</label>
-                    <?php if($poll->is_closed): ?>
-                        <span class="badge bg-secondary">Sudah Ditutup</span>
-                    <?php else: ?>
-                        <span class="badge bg-primary">Sedang Berjalan</span>
-                    <?php endif; ?>
+                    <small class="text-muted">
+                        Pastikan total opsi (lama + baru yang tidak kosong) minimal 2.
+                    </small>
                 </div>
 
                 <button type="submit" class="btn btn-primary">Simpan Perubahan</button>
@@ -225,8 +174,26 @@ unset($__errorArgs, $__bag); ?>
 
         </div>
     </div>
-
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const btnAdd = document.getElementById('btn-add-option');
+    const container = document.getElementById('new-options-container');
+
+    if (btnAdd && container) {
+        btnAdd.addEventListener('click', function () {
+            const wrapper = document.createElement('div');
+            wrapper.className = 'input-group mb-2';
+            wrapper.innerHTML = `
+                <span class="input-group-text">Opsi Baru</span>
+                <input type="text" name="options_new[]" class="form-control">
+            `;
+            container.appendChild(wrapper);
+        });
+    }
+});
+</script>
 <?php $__env->stopSection(); ?>
 
 <?php echo $__env->make('layouts.app', array_diff_key(get_defined_vars(), ['__data' => 1, '__path' => 1]))->render(); ?><?php /**PATH C:\xampp\php\New folder\WarVote\resources\views/admin/polls/edit.blade.php ENDPATH**/ ?>
